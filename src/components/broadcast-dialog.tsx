@@ -49,26 +49,26 @@ export function BroadcastDialog({ children }: { children: React.ReactNode }) {
       <Dialog.Trigger>{children}</Dialog.Trigger>
 
       <Dialog.Content style={{ maxWidth: 450 }}>
-        <Dialog.Title>Create new stream</Dialog.Title>
+        <Dialog.Title>发起新直播或者进入直播</Dialog.Title>
         <Flex direction="column" gap="4" mt="4">
           <label>
             <Text as="div" size="2" mb="1" weight="bold">
-              Room name
+              房间名
             </Text>
             <TextField.Input
               type="text"
-              placeholder="abcd-1234"
+              placeholder="1234"
               value={roomName}
               onChange={(e) => setRoomName(e.target.value)}
             />
           </label>
           <label>
             <Text as="div" size="2" mb="1" weight="bold">
-              Your name
+              你的名称
             </Text>
             <TextField.Input
               type="text"
-              placeholder="Roger Dunn"
+              placeholder="张聪"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -76,7 +76,7 @@ export function BroadcastDialog({ children }: { children: React.ReactNode }) {
           <Flex direction="column" gap="2">
             <Flex justify="between">
               <Text as="div" size="2" mb="1" weight="bold">
-                Enable chat
+                启用聊天
               </Text>
               <Switch
                 checked={enableChat}
@@ -86,7 +86,7 @@ export function BroadcastDialog({ children }: { children: React.ReactNode }) {
             <Flex justify="between">
               <Flex align="center" gap="2">
                 <Text as="div" size="2" weight="bold">
-                  Viewers can participate
+                  观众可以参与
                 </Text>
                 <AllowParticipationInfo />
               </Flex>
