@@ -9,9 +9,9 @@ import {
   useMediaDeviceSelect,
   useParticipants,
   useRoomContext,
-  useTracks,
+  useTracks, CarouselLayout, ParticipantTile, TrackReference,
 } from "@livekit/components-react";
-import { CopyIcon, EyeClosedIcon, EyeOpenIcon } from "@radix-ui/react-icons";
+import {CaretDownIcon, CopyIcon, EyeClosedIcon, EyeOpenIcon} from "@radix-ui/react-icons";
 import { Avatar, Badge, Button, Flex, Grid, Text } from "@radix-ui/themes";
 import Confetti from "js-confetti";
 import {
@@ -44,7 +44,7 @@ function ConfettiCanvas() {
     setConfetti(new Confetti({ canvas: canvasEl?.current ?? undefined }));
   }, []);
 
-  return <canvas ref={canvasEl} className="absolute h-full w-full" />;
+  return <canvas ref={canvasEl} className="absolute h-full w-full" style={{ height: "20%" }}/>;
 }
 
 
@@ -62,6 +62,7 @@ export function StreamPlayer({ isHost = false }) {
 
   // 本地视频元素引用，用于将视频流渲染到页面
   const localVideoEl = useRef<HTMLVideoElement>(null);
+
 
   // 从上下文中获取房间信息
   const { metadata, name: roomName, state: roomState } = useRoomContext();
@@ -113,14 +114,59 @@ export function StreamPlayer({ isHost = false }) {
   }, [localVideoTrack, activeCameraDeviceId]);
 
   // 获取远程视频轨道，过滤掉本地参与者
-  const remoteVideoTracks = useTracks([Track.Source.Camera]).filter(
+/*  const remoteVideoTracks = useTracks([Track.Source.Camera]).filter(
       (t) => t.participant.identity !== localParticipant.identity
-  );
+  );*/
+  const remoteVideoTracks = useTracks([Track.Source.Camera]);
+
+  remoteVideoTracks.sort((a, b) => {
+    // 获取a轨道参与者的custom_identity
+    const aMeta = a.participant?.metadata;
+    const aCustomIdentity = aMeta ? JSON.parse(aMeta).custom_identity : null;
+
+    // 获取b轨道参与者的custom_identity
+    const bMeta = b.participant?.metadata;
+    const bCustomIdentity = bMeta ? JSON.parse(bMeta).custom_identity : null;
+
+    // 处理a和b中custom_identity为null的情况，将null值排在前面
+    if (aCustomIdentity === null && bCustomIdentity === null) {
+      return 0; // 两者都为null时保持原有顺序
+    } else if (aCustomIdentity === null) {
+      return -1; // a为null，a排在前面
+    } else if (bCustomIdentity === null) {
+      return 1; // b为null，b排在前面
+    }
+
+    // 当a和b的custom_identity都不为null时，按字符串升序排序
+    return aCustomIdentity.localeCompare(bCustomIdentity);
+  });
 
   // 获取远程音频轨道，过滤掉本地参与者
-  const remoteAudioTracks = useTracks([Track.Source.Microphone]).filter(
+/*  const remoteAudioTracks = useTracks([Track.Source.Microphone]).filter(
       (t) => t.participant.identity !== localParticipant.identity
-  );
+  );*/
+  const remoteAudioTracks = useTracks([Track.Source.Microphone]);
+  remoteAudioTracks.sort((a, b) => {
+    // 获取a轨道参与者的custom_identity
+    const aMeta = a.participant?.metadata;
+    const aCustomIdentity = aMeta ? JSON.parse(aMeta).custom_identity : null;
+
+    // 获取b轨道参与者的custom_identity
+    const bMeta = b.participant?.metadata;
+    const bCustomIdentity = bMeta ? JSON.parse(bMeta).custom_identity : null;
+
+    // 处理a和b中custom_identity为null的情况，将null值排在前面
+    if (aCustomIdentity === null && bCustomIdentity === null) {
+      return 0; // 两者都为null时保持原有顺序
+    } else if (aCustomIdentity === null) {
+      return -1; // a为null，a排在前面
+    } else if (bCustomIdentity === null) {
+      return 1; // b为null，b排在前面
+    }
+
+    // 当a和b的custom_identity都不为null时，按字符串升序排序
+    return aCustomIdentity.localeCompare(bCustomIdentity);
+  });
 
   // 获取身份验证令牌
   const authToken = useAuthToken();
@@ -141,67 +187,113 @@ export function StreamPlayer({ isHost = false }) {
     });
   };
 
+  const [screenShare, setScreenShare] = useState(false);
+  const screenShareTracks = useTracks([Track.Source.ScreenShare]);
+
+  // 屏幕共享元素引用，用于将视频流渲染到页面
+  const screenShareEl = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    if (roomState === ConnectionState.Connected) {
+      localParticipant.setScreenShareEnabled(screenShare).then(
+          (op) => {
+            if (op?.track) {
+              // if (screenShareEl?.current) {
+              //   op.track?.attach(screenShareEl.current);
+              // }
+              localParticipant.publishTrack(op.track).catch((err) => {
+                console.error("屏幕共享轨道发布失败:", err);
+              });
+            }
+          },
+      )
+    }
+  }, [screenShare]);
+
+
   // 渲染组件界面
-  return (
-      <div className="relative h-full w-full bg-black">
-        <Grid className="w-full h-full absolute" gap="2">
-          {canHost && (
-              <div className="relative">
-                <Flex
-                    className="absolute w-full h-full"
-                    align="center"
-                    justify="center"
-                >
-                  <Avatar
-                      size="9"
-                      fallback={localParticipant.identity[0] ?? "?"}
-                      radius="full"
-                  />
-                </Flex>
-                <video
-                    ref={localVideoEl}
-                    className="absolute w-full h-full object-contain -scale-x-100 bg-transparent"
-                />
-                <div className="absolute w-full h-full">
-                  <Badge
-                      variant="outline"
-                      color="gray"
-                      className="absolute bottom-2 right-2"
+return (
+    <div className="relative h-full max-h-screen w-full bg-black flex flex-col overflow-y-auto">
+        {/* 顶部视频区域 - 横向排列 */}
+        <div className="w-full overflow-x-auto flex-shrink-0" style={{ height: "30%" }}>
+          <div className="flex h-full space-x-2 p-2">
+           {/* {canHost && (
+                <div className="relative" style={{ minWidth: "200px", height: "100%" }}>
+                  <Flex
+                      className="absolute w-full h-full"
+                      align="center"
+                      justify="center"
                   >
-                    {localParticipant.identity} (you)
-                  </Badge>
-                </div>
-              </div>
-          )}
-          {remoteVideoTracks.map((t) => (
-              <div key={t.participant.identity} className="relative">
-                <Flex
-                    className="absolute w-full h-full"
-                    align="center"
-                    justify="center"
-                >
-                  <Avatar
-                      size="9"
-                      fallback={t.participant.identity[0] ?? "?"}
-                      radius="full"
+                    <Avatar
+                        size="9"
+                        fallback={localParticipant.identity[0] ?? "?"}
+                        radius="full"
+                    />
+                  </Flex>
+                  <video
+                      ref={localVideoEl}
+                      className="absolute w-full h-full"
                   />
-                </Flex>
-                <VideoTrack
-                    trackRef={t}
-                    className="absolute w-full h-full bg-transparent"
-                />
-                <div className="absolute w-full h-full">
-                  <Badge
-                      variant="outline"
-                      color="gray"
-                      className="absolute bottom-2 right-2"
-                  >
-                    {t.participant.identity}
-                  </Badge>
+                  <div className="absolute w-full h-full">
+                    <Badge
+                        variant="outline"
+                        color="gray"
+                        className="absolute bottom-2 right-2"
+                    >
+                      {localParticipant.identity} (you)
+                    </Badge>
+                  </div>
                 </div>
-              </div>
-          ))}
-        </Grid>
+            )}*/}
+            {remoteVideoTracks.map((t) => (
+                <div key={t.participant.identity} className="relative" style={{ minWidth: "200px", height: "100%" }}>
+{/*                  <Flex
+                      className="absolute w-full h-full"
+                      align="center"
+                      justify="center"
+                  >
+                    <Avatar
+                        size="9"
+                        fallback={t.participant.identity[0] ?? "?"}
+                        radius="full"
+                    />
+                  </Flex>*/}
+                  {/* 移除Flex容器，直接显示视频 */}
+                  <VideoTrack
+                      trackRef={t}
+                      className="absolute w-full h-full object-cover bg-transparent"
+                  />
+
+                  {/* 名字徽章 */}
+                  <div className="absolute bottom-2 right-2 z-20">
+                    <Badge
+                        variant="outline"
+                        color="gray"
+                    >
+                      {roomMetadata?.creator_identity === t.participant.identity ? (
+                          <span className="inline-block px-1.5 py-0.5 text-xs font-semibold text-white bg-red-9 rounded mr-1">主播</span>
+                      ) : (
+                          <span className="inline-block px-1.5 py-0.5 text-xs font-semibold text-gray-700 bg-gray-300 rounded mr-1">观众</span>
+                      )}
+                      {t.participant.identity} {t.participant.identity === localParticipant.identity && " (you)"}
+
+                    </Badge>
+                  </div>
+                </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 修改后的白板区域 */}
+        <div className="bg-gray-900 border-t border-gray-700 relative flex justify-center items-center" style={{ height: "70%", width: "100%" }}>
+          <div className="w-full h-full relative flex items-center justify-center overflow-hidden">
+            {screenShareTracks && screenShareTracks.length > 0 && (<VideoTrack
+                trackRef={screenShareTracks[0]}
+                className="max-w-full max-h-full object-contain"
+            />)}
+          </div>
+        </div>
+
+        {/* 以下元素保持不变 */}
         {remoteAudioTracks.map((t) => (
             <AudioTrack trackRef={t} key={t.participant.identity} />
         ))}
@@ -236,6 +328,16 @@ export function StreamPlayer({ isHost = false }) {
                         localParticipant.identity && (
                             <Button size="1" onClick={onLeaveStage}>
                               下台
+                            </Button>
+                        )}
+                    {roomMetadata?.creator_identity ==
+                        localParticipant.identity && (
+                            <Button
+                                size="1"
+                                variant={screenShare ? "soft" : "surface"}
+                                onClick={() => setScreenShare(!screenShare)}
+                            >
+                              屏幕共享 {screenShare ? "打开" : "关闭"}
                             </Button>
                         )}
                   </Flex>

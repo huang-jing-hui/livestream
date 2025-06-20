@@ -76,7 +76,7 @@ export function Chat() {
     <Flex direction="column" className="h-full">
       <Box className="text-center p-2 border-b border-accent-5">
         <Text size="2" className="font-mono text-accent-11">
-          Live Chat
+          在线聊天
         </Text>
       </Box>
       <Flex
@@ -95,7 +95,7 @@ export function Chat() {
             <TextField.Input
               disabled={!chatEnabled}
               placeholder={
-                chatEnabled ? "Say something..." : "Chat is disabled"
+                chatEnabled ? "说点什么。。。" : "聊天已禁用"
               }
               value={draft}
               onChange={(e) => setDraft(e.target.value)}

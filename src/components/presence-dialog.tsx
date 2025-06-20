@@ -81,30 +81,30 @@ function ParticipantListItem({
       ) {
         return (
           <Button size="1" variant="outline" onClick={onCancel}>
-            Remove
+            下台
           </Button>
         );
       } else if (participantMetadata.hand_raised) {
         return (
           <Flex gap="2">
             <Button size="1" onClick={onInvite}>
-              Accept
+              接受
             </Button>
             <Button size="1" variant="outline" onClick={onCancel}>
-              Reject
+              拒绝
             </Button>
           </Flex>
         );
       } else if (participantMetadata.invited_to_stage) {
         return (
           <Button size="1" variant="outline" disabled>
-            Pending
+            等候
           </Button>
         );
       } else if (!participantMetadata.invited_to_stage) {
         return (
           <Button size="1" onClick={onInvite}>
-            Invite to stage
+            邀请上台
           </Button>
         );
       }
@@ -119,7 +119,7 @@ function ParticipantListItem({
       ) {
         return (
           <Button size="1" onClick={onCancel}>
-            Leave stage
+            下台
           </Button>
         );
       } else if (
@@ -129,10 +129,10 @@ function ParticipantListItem({
         return (
           <Flex gap="2">
             <Button size="1" onClick={onRaiseHand}>
-              Accept
+              接受
             </Button>
             <Button size="1" variant="outline" onClick={onCancel}>
-              Reject
+              拒绝
             </Button>
           </Flex>
         );
@@ -142,7 +142,7 @@ function ParticipantListItem({
       ) {
         return (
           <Button size="1" variant="outline" onClick={onCancel}>
-            Cancel
+            取消
           </Button>
         );
       } else if (
@@ -151,7 +151,7 @@ function ParticipantListItem({
       ) {
         return (
           <Button size="1" onClick={onRaiseHand}>
-            Raise hand
+            举手
           </Button>
         );
       }
@@ -203,7 +203,7 @@ export function PresenceDialog({
       <Dialog.Content style={{ maxWidth: 450 }}>
         <Dialog.Title>
           <Flex justify="between" align="center">
-            Who&rsquo;s here
+            观众列表
             <Dialog.Close>
               <IconButton variant="ghost" color="gray">
                 <Cross1Icon />
@@ -215,7 +215,7 @@ export function PresenceDialog({
           {hosts.length > 0 && (
             <Flex direction="column" gap="2">
               <Text size="1" className="uppercase font-bold text-gray-11">
-                {hosts.length > 1 ? "Co-Hosts" : "Host"}
+                {hosts.length > 1 ? "台上" : "Host"}
               </Text>
               {hosts.map((participant) => (
                 <ParticipantListItem
@@ -232,7 +232,7 @@ export function PresenceDialog({
           {viewers.length > 0 && (
             <Flex direction="column" gap="2">
               <Text size="1" className="uppercase font-bold text-gray-11">
-                Viewers
+                观众
               </Text>
               {viewers.map((participant) => (
                 <ParticipantListItem

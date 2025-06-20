@@ -227,7 +227,7 @@ export class Controller {
     });
 
     // TODO turn off auto creation in the dashboard
-    await this.roomService.createRoom({
+    const room = await this.roomService.createRoom({
       name: roomName,
       metadata: JSON.stringify(metadata),
     });
@@ -282,7 +282,10 @@ export class Controller {
       process.env.LIVEKIT_API_KEY!,
       process.env.LIVEKIT_API_SECRET!,
       {
-        identity,
+        identity: identity,
+        metadata: JSON.stringify({
+          custom_identity: 1,
+        })
       }
     );
 
