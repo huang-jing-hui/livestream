@@ -9,11 +9,13 @@ import {
   IngressInfo,
   IngressInput,
   IngressVideoEncodingPreset,
+  IngressVideoOptions,
+  IngressAudioOptions,
   ParticipantInfo,
   ParticipantPermission,
   RoomServiceClient,
 } from "livekit-server-sdk";
-import { TrackSource } from "livekit-server-sdk/dist/proto/livekit_models";
+import { TrackSource } from "livekit-server-sdk";
 
 export type RoomMetadata = {
   creator_identity: string;
@@ -142,17 +144,25 @@ export class Controller {
 
     if (ingress_type === "whip") {
       // https://docs.livekit.io/egress-ingress/ingress/overview/#bypass-transcoding-for-whip-sessions
-      options.bypassTranscoding = true;
+      options.enableTranscoding = true;
     } else {
-      options.video = {
-        source: TrackSource.CAMERA,
-        preset: IngressVideoEncodingPreset.H264_1080P_30FPS_3_LAYERS,
-      };
-      options.audio = {
+      options.video = IngressVideoOptions.fromJson(
+          {
+            source: TrackSource.CAMERA,
+            encodingOptions: {
+              value: IngressVideoEncodingPreset.H264_1080P_30FPS_3_LAYERS,
+              case: "preset"
+            }
+          }
+      )
+      options.audio = IngressAudioOptions.fromJson({
         source: TrackSource.MICROPHONE,
-        preset: IngressAudioEncodingPreset.OPUS_STEREO_96KBPS,
-      };
-    }
+        encodingOptions: {
+          value: IngressAudioEncodingPreset.OPUS_STEREO_96KBPS,
+          case: "preset"
+        }
+    })
+      }
 
     const ingress = await this.ingressService.createIngress(
       ingress_type === "whip"
@@ -189,7 +199,7 @@ export class Controller {
       auth_token: authToken,
       connection_details: {
         ws_url: process.env.LIVEKIT_WS_URL!,
-        token: at.toJwt(),
+        token: await at.toJwt(),
       },
     };
   }
@@ -221,10 +231,10 @@ export class Controller {
       name: roomName,
       metadata: JSON.stringify(metadata),
     });
-
+    const token = await at.toJwt();
     const connection_details = {
       ws_url: process.env.LIVEKIT_WS_URL!,
-      token: at.toJwt(),
+      token: token,
     };
 
     const authToken = this.createAuthToken(roomName, metadata.creator_identity);
@@ -290,7 +300,7 @@ export class Controller {
       auth_token: authToken,
       connection_details: {
         ws_url: process.env.LIVEKIT_WS_URL!,
-        token: at.toJwt(),
+        token: await at.toJwt(),
       },
     };
   }

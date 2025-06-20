@@ -18,6 +18,6 @@ export default async function HostPage({
   const serverUrl = process.env
     .LIVEKIT_WS_URL!.replace("wss://", "https://")
     .replace("ws://", "http://");
-  console.log("serverUrl=" + serverUrl);
+
   return <HostPageImpl authToken={at} roomToken={rt} serverUrl={serverUrl} />;
 }

@@ -8,20 +8,37 @@ import {
 } from "@livekit/components-react";
 import { CaretDownIcon } from "@radix-ui/react-icons";
 import { Button, DropdownMenu, Flex } from "@radix-ui/themes";
-import { ConnectionState } from "livekit-client";
+import {ConnectionState, LocalVideoTrack} from "livekit-client";
 import { useEffect, useState } from "react";
 
-export function MediaDeviceSettings() {
+export function MediaDeviceSettings({
+      localVideoTrack,
+    }:{
+  localVideoTrack: LocalVideoTrack | undefined;
+
+}) {
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
 
   const { state: roomState } = useRoomContext();
   const { localParticipant } = useLocalParticipant();
 
+  const handleCamEnabledChange = (newCamEnabled: boolean) => {
+    if (localVideoTrack) {
+
+      if (!newCamEnabled) {
+        localVideoTrack.stop(); // 关闭摄像头
+      } else {
+        localVideoTrack.restartTrack();
+      }
+    }
+  };
   useEffect(() => {
     if (roomState === ConnectionState.Connected) {
       void localParticipant.setMicrophoneEnabled(micEnabled);
       void localParticipant.setCameraEnabled(camEnabled);
+      handleCamEnabledChange(camEnabled)
+
     }
   }, [micEnabled, camEnabled, localParticipant, roomState]);
 
@@ -49,7 +66,7 @@ export function MediaDeviceSettings() {
           variant={micEnabled ? "soft" : "surface"}
           onClick={() => setMicEnabled(!micEnabled)}
         >
-          Mic {micEnabled ? "On" : "Off"}
+          麦克风 {micEnabled ? "打开" : "关闭"}
         </Button>
         <DropdownMenu.Root>
           <DropdownMenu.Trigger disabled={!micEnabled}>
@@ -78,7 +95,7 @@ export function MediaDeviceSettings() {
           variant={camEnabled ? "soft" : "surface"}
           onClick={() => setCamEnabled(!camEnabled)}
         >
-          Cam {camEnabled ? "On" : "Off"}
+          摄像头 {camEnabled ? "打开" : "关闭"}
         </Button>
         <DropdownMenu.Root>
           <DropdownMenu.Trigger disabled={!camEnabled}>
