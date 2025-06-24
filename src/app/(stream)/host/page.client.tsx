@@ -2,7 +2,7 @@
 
 import { Chat } from "@/components/chat";
 import { ReactionBar } from "@/components/reaction-bar";
-import { StreamPlayer } from "@/components/stream-player";
+import { StreamPlayer } from "@/components/stream-player-v2";
 import { TokenContext } from "@/components/token-context";
 import { LiveKitRoom } from "@livekit/components-react";
 import { Box, Flex } from "@radix-ui/themes";

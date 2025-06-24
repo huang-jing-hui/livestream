@@ -2,7 +2,7 @@ import {useCopyToClipboard} from "@/lib/clipboard";
 import {ParticipantMetadata, RoomMetadata} from "@/lib/controller";
 import {
   AudioTrack,
-  StartAudio,
+  StartAudio, TrackReference,
   useDataChannel,
   useLocalParticipant,
   useMediaDeviceSelect,
@@ -14,7 +14,14 @@ import {
 import {CopyIcon, EyeClosedIcon, EyeOpenIcon} from "@radix-ui/react-icons";
 import {Badge, Button, Flex, Text} from "@radix-ui/themes";
 import Confetti from "js-confetti";
-import {ConnectionState, createLocalTracks, LocalVideoTrack, Track,} from "livekit-client";
+import {
+  ConnectionState,
+  createLocalTracks,
+  createLocalVideoTrack,
+  LocalVideoTrack,
+  Track,
+  VideoPresets,
+} from "livekit-client";
 import {useEffect, useRef, useState} from "react";
 import {MediaDeviceSettings} from "./media-device-settings";
 import {PresenceDialog} from "./presence-dialog";
@@ -43,6 +50,21 @@ function ConfettiCanvas() {
 }
 
 
+function SortIdentity(a: TrackReference, b: TrackReference) {
+  // 获取a轨道参与者的custom_identity
+  const aMeta = a.participant?.metadata;
+  const aCustomIdentity = aMeta ? JSON.parse(aMeta).custom_identity : 999;
+
+  // 获取b轨道参与者的custom_identity
+  const bMeta = b.participant?.metadata;
+  const bCustomIdentity = bMeta ? JSON.parse(bMeta).custom_identity : 999;
+
+  if (aCustomIdentity !== bCustomIdentity) {
+    return aCustomIdentity-bCustomIdentity;
+  }
+  return a.participant.identity.localeCompare(b.participant.identity);
+}
+
 /**
  * StreamPlayer 组件用于渲染流媒体播放器界面，允许用户根据权限观看和控制直播。
  * @param {Object} props 组件属性
@@ -51,13 +73,6 @@ function ConfettiCanvas() {
 export function StreamPlayer({ isHost = false }) {
   // 使用 useCopyToClipboard 钩子来处理复制链接到剪贴板的功能
   const [_, copy] = useCopyToClipboard();
-
-  // 本地视频轨道状态，用于管理本地视频流
-  const [localVideoTrack, setLocalVideoTrack] = useState<LocalVideoTrack>();
-
-  // 本地视频元素引用，用于将视频流渲染到页面
-  const localVideoEl = useRef<HTMLVideoElement>(null);
-
 
   // 从上下文中获取房间信息
   const { metadata, name: roomName, state: roomState } = useRoomContext();
@@ -71,6 +86,20 @@ export function StreamPlayer({ isHost = false }) {
   // 确定参与者是否有主播权限
   const canHost =
       isHost || (localMetadata?.invited_to_stage && localMetadata?.hand_raised);
+  // 当主播权限变化时，创建或更新本地视频轨道
+  useEffect(() => {
+    if (canHost) {
+      const createTracks = async () => {
+        const camTrack = await createLocalVideoTrack({
+          facingMode: 'user',
+          resolution: VideoPresets.h360,
+        });
+        await localParticipant.publishTrack(camTrack);
+      };
+      void createTracks();
+    }
+  }, [canHost]);
+
   // 获取参与者列表
   const participants = useParticipants();
   // 确定是否显示通知图标，根据参与者是否举手和是否被邀请上台
@@ -82,85 +111,17 @@ export function StreamPlayer({ isHost = false }) {
       })
       : localMetadata?.invited_to_stage && !localMetadata?.hand_raised;
 
-  // 当主播权限变化时，创建或更新本地视频轨道
-  useEffect(() => {
-    if (canHost) {
-      const createTracks = async () => {
-        const tracks = await createLocalTracks({ audio: true, video: true });
-        const camTrack = tracks.find((t) => t.kind === Track.Kind.Video);
-        if (camTrack && localVideoEl?.current) {
-          camTrack.attach(localVideoEl.current);
-        }
-        setLocalVideoTrack(camTrack as LocalVideoTrack);
-      };
-      void createTracks();
-    }
-  }, [canHost]);
-
-  // 当摄像头设备变化时，更新本地视频轨道
-  const { activeDeviceId: activeCameraDeviceId } = useMediaDeviceSelect({
-    kind: "videoinput",
-  });
-
-  useEffect(() => {
-    if (localVideoTrack) {
-      void localVideoTrack.setDeviceId(activeCameraDeviceId);
-    }
-  }, [localVideoTrack, activeCameraDeviceId]);
-
-  // 获取远程视频轨道，过滤掉本地参与者
-/*  const remoteVideoTracks = useTracks([Track.Source.Camera]).filter(
-      (t) => t.participant.identity !== localParticipant.identity
-  );*/
+  // 获取远程视频轨道
   const remoteVideoTracks = useTracks([Track.Source.Camera]);
 
   remoteVideoTracks.sort((a, b) => {
-    // 获取a轨道参与者的custom_identity
-    const aMeta = a.participant?.metadata;
-    const aCustomIdentity = aMeta ? JSON.parse(aMeta).custom_identity : null;
-
-    // 获取b轨道参与者的custom_identity
-    const bMeta = b.participant?.metadata;
-    const bCustomIdentity = bMeta ? JSON.parse(bMeta).custom_identity : null;
-
-    // 处理a和b中custom_identity为null的情况，将null值排在前面
-    if (aCustomIdentity === null && bCustomIdentity === null) {
-      return 0; // 两者都为null时保持原有顺序
-    } else if (aCustomIdentity === null) {
-      return -1; // a为null，a排在前面
-    } else if (bCustomIdentity === null) {
-      return 1; // b为null，b排在前面
-    }
-
-    // 当a和b的custom_identity都不为null时，按字符串升序排序
-    return aCustomIdentity.localeCompare(bCustomIdentity);
+    return SortIdentity(a, b);
   });
 
-  // 获取远程音频轨道，过滤掉本地参与者
-/*  const remoteAudioTracks = useTracks([Track.Source.Microphone]).filter(
-      (t) => t.participant.identity !== localParticipant.identity
-  );*/
+  // 获取远程音频轨道
   const remoteAudioTracks = useTracks([Track.Source.Microphone]);
   remoteAudioTracks.sort((a, b) => {
-    // 获取a轨道参与者的custom_identity
-    const aMeta = a.participant?.metadata;
-    const aCustomIdentity = aMeta ? JSON.parse(aMeta).custom_identity : null;
-
-    // 获取b轨道参与者的custom_identity
-    const bMeta = b.participant?.metadata;
-    const bCustomIdentity = bMeta ? JSON.parse(bMeta).custom_identity : null;
-
-    // 处理a和b中custom_identity为null的情况，将null值排在前面
-    if (aCustomIdentity === null && bCustomIdentity === null) {
-      return 0; // 两者都为null时保持原有顺序
-    } else if (aCustomIdentity === null) {
-      return -1; // a为null，a排在前面
-    } else if (bCustomIdentity === null) {
-      return 1; // b为null，b排在前面
-    }
-
-    // 当a和b的custom_identity都不为null时，按字符串升序排序
-    return aCustomIdentity.localeCompare(bCustomIdentity);
+    return SortIdentity(a, b);
   });
 
   // 获取身份验证令牌
@@ -184,17 +145,11 @@ export function StreamPlayer({ isHost = false }) {
 
   const [screenShare, setScreenShare] = useState(false);
   const screenShareTracks = useTracks([Track.Source.ScreenShare]);
-
-  // 屏幕共享元素引用，用于将视频流渲染到页面
-  const screenShareEl = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     if (roomState === ConnectionState.Connected) {
       localParticipant.setScreenShareEnabled(screenShare).then(
           (op) => {
             if (op?.track) {
-              // if (screenShareEl?.current) {
-              //   op.track?.attach(screenShareEl.current);
-              // }
               localParticipant.publishTrack(op.track).catch((err) => {
                 console.error("屏幕共享轨道发布失败:", err);
               });
@@ -211,47 +166,10 @@ return (
         {/* 顶部视频区域 - 横向排列 */}
         <div className="w-full overflow-x-auto flex-shrink-0" style={{ height: "30%" }}>
           <div className="flex h-full space-x-2 p-2">
-           {/* {canHost && (
-                <div className="relative" style={{ minWidth: "200px", height: "100%" }}>
-                  <Flex
-                      className="absolute w-full h-full"
-                      align="center"
-                      justify="center"
-                  >
-                    <Avatar
-                        size="9"
-                        fallback={localParticipant.identity[0] ?? "?"}
-                        radius="full"
-                    />
-                  </Flex>
-                  <video
-                      ref={localVideoEl}
-                      className="absolute w-full h-full"
-                  />
-                  <div className="absolute w-full h-full">
-                    <Badge
-                        variant="outline"
-                        color="gray"
-                        className="absolute bottom-2 right-2"
-                    >
-                      {localParticipant.identity} (you)
-                    </Badge>
-                  </div>
-                </div>
-            )}*/}
+
             {remoteVideoTracks.map((t) => (
                 <div key={t.participant.identity} className="relative" style={{ minWidth: "200px", height: "100%" }}>
-{/*                  <Flex
-                      className="absolute w-full h-full"
-                      align="center"
-                      justify="center"
-                  >
-                    <Avatar
-                        size="9"
-                        fallback={t.participant.identity[0] ?? "?"}
-                        radius="full"
-                    />
-                  </Flex>*/}
+
                   {/* 移除Flex容器，直接显示视频 */}
                   <VideoTrack
                       trackRef={t}
@@ -316,9 +234,9 @@ return (
                     "Loading..."
                 )}
               </Button>
-              {roomName && canHost && (
+              {roomName && canHost &&(
                   <Flex gap="2">
-                    <MediaDeviceSettings />
+                    <MediaDeviceSettings/>
                     {roomMetadata?.creator_identity !==
                         localParticipant.identity && (
                             <Button size="1" onClick={onLeaveStage}>

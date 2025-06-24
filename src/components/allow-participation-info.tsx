@@ -27,10 +27,9 @@ export function AllowParticipationInfo() {
         align="center"
       >
         <Text as="p" size="1">
-          If enabled, viewers can <Strong>raise their hand</Strong>. When
-          accepted by the host, they can share their audio and video. The host
-          can also <Strong>invite</Strong> viewers to share their audio and
-          video.
+          如果启用，观众可以<Strong>举手</Strong>。什么时候
+          主播接受后，他们可以共享自己的音频和视频。主播
+          还可以<Strong>邀请</Strong>观众上台
         </Text>
       </Popover.Content>
     </Popover.Root>

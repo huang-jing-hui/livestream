@@ -24,9 +24,11 @@ import { useState } from "react";
 export default function WatchPage({
   roomName,
   serverUrl,
+  imServerUrl,
 }: {
   roomName: string;
   serverUrl: string;
+  imServerUrl: string;
 }) {
   const [name, setName] = useState("");
   const [authToken, setAuthToken] = useState("");
@@ -35,7 +37,7 @@ export default function WatchPage({
 
   const onJoin = async () => {
     setLoading(true);
-    const res = await fetch("/api/join_stream", {
+    const res = await fetch(imServerUrl+"/api/join_stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

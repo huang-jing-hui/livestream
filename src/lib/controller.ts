@@ -213,6 +213,9 @@ export class Controller {
       process.env.LIVEKIT_API_SECRET!,
       {
         identity: metadata.creator_identity,
+        metadata: JSON.stringify({
+          custom_identity: 0,
+        })
       }
     );
 

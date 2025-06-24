@@ -30,6 +30,7 @@ function ParticipantListItem({
   const authToken = useAuthToken();
   const participantMetadata = (participant.metadata &&
     JSON.parse(participant.metadata)) as ParticipantMetadata;
+  console.log(JSON.stringify(participant))
   const room = useRoomContext();
   const roomMetadata = (room.metadata &&
     JSON.parse(room.metadata)) as RoomMetadata;
