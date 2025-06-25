@@ -16,7 +16,8 @@ import {
   Text,
   TextField,
 } from "@radix-ui/themes";
-import { useMemo, useState } from "react";
+import {useEffect, useMemo, useState} from "react";
+import EventBus from "../js/eventBus"
 
 function ChatMessage({ message }: { message: ReceivedChatMessage }) {
   const { localParticipant } = useLocalParticipant();
@@ -45,7 +46,10 @@ function ChatMessage({ message }: { message: ReceivedChatMessage }) {
     </Flex>
   );
 }
-
+export type MessageData = {
+  type: number; // 1: 聊天, 2: 白板
+  message: string; // 内容
+};
 export function Chat() {
   const [draft, setDraft] = useState("");
   const { chatMessages, send } = useChat();
@@ -55,22 +59,77 @@ export function Chat() {
     metadata ? JSON.parse(metadata) : {}
   ) as RoomMetadata;
 
-  // HACK: why do we get duplicate messages?
   const messages = useMemo(() => {
-    const timestamps = chatMessages.map((msg) => msg.timestamp);
-    const filtered = chatMessages.filter(
-      (msg, i) => !timestamps.includes(msg.timestamp, i + 1)
+    // 1. 去重处理
+    const uniqueMessages = chatMessages.filter(
+        (msg, index, self) =>
+            index === self.findIndex((m) => (
+                m.timestamp === msg.timestamp &&
+                m.message === msg.message
+            ))
     );
 
-    return filtered;
+    // 2. 分类处理
+    const chatMsgs: ReceivedChatMessage[] = [];
+
+    uniqueMessages.forEach((msg) => {
+      try {
+        const parsed = JSON.parse(msg.message) as MessageData;
+
+        switch(parsed.type) {
+          case 1: // 聊天消息
+            chatMsgs.push({
+              timestamp: msg.timestamp,
+              message: parsed.message,
+              from: msg.from
+            });
+            break;
+          case 2: // 白板消息
+            EventBus.publish("bai_ban", parsed);
+            break;
+          case 3: // 屏幕消息
+            EventBus.publish("pin_mu", parsed);
+            break;
+          default:
+            console.warn('Unknown message type:', parsed.type);
+        }
+      } catch (e) {
+        console.error('Message parsing failed:', e);
+        // 如果解析失败，默认作为聊天消息处理
+        chatMsgs.push(msg);
+      }
+    });
+
+    return chatMsgs;
   }, [chatMessages]);
+
 
   const onSend = async () => {
     if (draft.trim().length && send) {
       setDraft("");
-      await send(draft);
+      const message  ={
+        type: 1,
+        message: draft
+      } as MessageData
+      await send(JSON.stringify(message));
     }
   };
+
+  // 消息推送组件
+  useEffect(() => {
+    const handler = (data: MessageData) => {
+      // 处理白板消息
+      console.log('准备推送消息:', data);
+      if (send) {
+         send(JSON.stringify(data)).then((m) => {
+           console.log('消息推送成功');
+         });
+      }
+    };
+
+    EventBus.subscribe("message", handler);
+    return () => EventBus.unsubscribe("message", handler);
+  }, []);
 
   return (
     <Flex direction="column" className="h-full">

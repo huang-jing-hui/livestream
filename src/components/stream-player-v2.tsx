@@ -22,10 +22,18 @@ import {
   Track,
   VideoPresets,
 } from "livekit-client";
-import {useEffect, useRef, useState} from "react";
+import {StrictMode, useEffect, useRef, useState} from "react";
 import {MediaDeviceSettings} from "./media-device-settings";
+import {BaiBan} from "./baiban";
 import {PresenceDialog} from "./presence-dialog";
 import {useAuthToken} from "./token-context";
+import EventBus from "@/js/eventBus";
+import {MessageData} from "@/components/chat";
+import React from "react";
+
+export type BaiBanMessage = {
+  stats: boolean; // 白板状态,打开或关闭
+};
 
 function ConfettiCanvas() {
   const [confetti, setConfetti] = useState<Confetti>();
@@ -49,7 +57,7 @@ function ConfettiCanvas() {
   return <canvas ref={canvasEl} className="absolute h-full w-full" style={{ height: "20%" }}/>;
 }
 
-
+/*将台上用户按照身份排序*/
 function SortIdentity(a: TrackReference, b: TrackReference) {
   // 获取a轨道参与者的custom_identity
   const aMeta = a.participant?.metadata;
@@ -64,6 +72,7 @@ function SortIdentity(a: TrackReference, b: TrackReference) {
   }
   return a.participant.identity.localeCompare(b.participant.identity);
 }
+
 
 /**
  * StreamPlayer 组件用于渲染流媒体播放器界面，允许用户根据权限观看和控制直播。
@@ -86,19 +95,31 @@ export function StreamPlayer({ isHost = false }) {
   // 确定参与者是否有主播权限
   const canHost =
       isHost || (localMetadata?.invited_to_stage && localMetadata?.hand_raised);
-  // 当主播权限变化时，创建或更新本地视频轨道
-  useEffect(() => {
-    if (canHost) {
-      const createTracks = async () => {
-        const camTrack = await createLocalVideoTrack({
-          facingMode: 'user',
-          resolution: VideoPresets.h360,
-        });
-        await localParticipant.publishTrack(camTrack);
-      };
-      void createTracks();
-    }
-  }, [canHost]);
+  // localParticipant.setCameraEnabled(
+  //     true,
+  //     {
+  //       deviceId: useMediaDeviceSelect({
+  //         kind: "videoinput",
+  //       }).activeDeviceId,
+  //       facingMode: 'user',
+  //       resolution: VideoPresets.h360,
+  //     }
+  // );
+
+
+  // // 当主播权限变化时，创建或更新本地视频轨道
+  // useEffect(() => {
+  //   if (canHost) {
+  //     const createTracks = async () => {
+  //       const camTrack = await createLocalVideoTrack({
+  //         facingMode: 'user',
+  //         resolution: VideoPresets.h360,
+  //       });
+  //       await localParticipant.publishTrack(camTrack);
+  //     };
+  //     void createTracks();
+  //   }
+  // }, [canHost]);
 
   // 获取参与者列表
   const participants = useParticipants();
@@ -143,6 +164,7 @@ export function StreamPlayer({ isHost = false }) {
     });
   };
 
+  /*屏幕共享*/
   const [screenShare, setScreenShare] = useState(false);
   const screenShareTracks = useTracks([Track.Source.ScreenShare]);
   useEffect(() => {
@@ -158,7 +180,51 @@ export function StreamPlayer({ isHost = false }) {
       )
     }
   }, [screenShare]);
+  const screenShareHandler=(screenShare: boolean) =>{
+    setBaiban(false)
+    setScreenShare(screenShare)
+  }
 
+
+  /*白板*/
+  const [baiban, setBaiban] = useState(false);
+  // 消息推送组件
+  useEffect(() => {
+    const handler = (data: MessageData) => {
+      // 处理白板消息
+      console.log('接收白板消息:', data);
+      const baibanMessage = (data && JSON.parse(data.message)) as BaiBanMessage;
+      setBaiban(baibanMessage.stats)
+    };
+
+    EventBus.subscribe("bai_ban", handler);
+    return () => EventBus.unsubscribe("message", handler);
+  }, []);
+  const baibanHandler=(baiban: boolean) =>{
+    setBaiban(baiban)
+    setScreenShare(false)
+    EventBus.publish("message", {
+      type: 2,
+      message: JSON.stringify({
+        stats: baiban
+      })
+    });
+    updateRoomBaiban();
+  }
+
+  const updateRoomBaiban = async () => {
+    // TODO: optimistic update
+    await fetch("/api/update_room_baiban", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${authToken}`,
+      },
+      body: JSON.stringify({
+        baiban_stats: baiban
+      }),
+    });
+  };
 
   // 渲染组件界面
 return (
@@ -197,19 +263,38 @@ return (
         </div>
 
         {/* 修改后的白板区域 */}
-        <div className="bg-gray-900 border-t border-gray-700 relative flex justify-center items-center" style={{ height: "70%", width: "100%" }}>
-          <div className="w-full h-full relative flex items-center justify-center overflow-hidden">
-            {screenShareTracks && screenShareTracks.length > 0 && (<VideoTrack
-                trackRef={screenShareTracks[0]}
-                className="max-w-full max-h-full object-contain"
-            />)}
-          </div>
-        </div>
+      {/* 白板/屏幕共享区域 */}
+      <div
+          className="bg-gray-900 border-t border-gray-700 relative"
+          style={{
+            height: "70%",
+            width: "100%",
+            display: baiban ? 'block' : 'none' // 只在白板启用时显示
+          }}
+      >
+        {/* 移除不必要的嵌套 div */}
+        {baiban && (
+
+                <BaiBan />
+
+        )}
+
+        {/* 屏幕共享 */}
+        {screenShareTracks.length > 0 && (
+            <div className="absolute inset-0">
+              <VideoTrack
+                  trackRef={screenShareTracks[0]}
+                  className="w-full h-full object-contain"
+              />
+            </div>
+        )}
+      </div>
 
         {/* 以下元素保持不变 */}
         {remoteAudioTracks.map((t) => (
             <AudioTrack trackRef={t} key={t.participant.identity} />
         ))}
+      {/*礼物特效*/}
         <ConfettiCanvas />
         <StartAudio
             label="Click to allow audio playback"
@@ -236,6 +321,7 @@ return (
               </Button>
               {roomName && canHost &&(
                   <Flex gap="2">
+                    {/*选择设备*/}
                     <MediaDeviceSettings/>
                     {roomMetadata?.creator_identity !==
                         localParticipant.identity && (
@@ -248,9 +334,19 @@ return (
                             <Button
                                 size="1"
                                 variant={screenShare ? "soft" : "surface"}
-                                onClick={() => setScreenShare(!screenShare)}
+                                onClick={() => screenShareHandler(!screenShare)}
                             >
                               屏幕共享 {screenShare ? "打开" : "关闭"}
+                            </Button>
+                        )}
+                    {roomMetadata?.creator_identity ==
+                        localParticipant.identity && (
+                            <Button
+                                size="1"
+                                variant={baiban ? "soft" : "surface"}
+                                onClick={() => baibanHandler(!baiban)}
+                            >
+                              白板 {baiban ? "打开" : "关闭"}
                             </Button>
                         )}
                   </Flex>

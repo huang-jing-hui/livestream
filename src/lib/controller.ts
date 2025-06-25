@@ -21,6 +21,7 @@ export type RoomMetadata = {
   creator_identity: string;
   enable_chat: boolean;
   allow_participation: boolean;
+  baiban_stats: boolean;
 };
 
 export type ParticipantMetadata = {
@@ -83,6 +84,10 @@ export type InviteToStageParams = {
 
 export type RemoveFromStageParams = {
   identity?: string;
+};
+
+export type UpdateRoomBaibanParams = {
+  baiban_stats: boolean;
 };
 
 export type ErrorResponse = {
@@ -391,6 +396,25 @@ export class Controller {
       identity,
       JSON.stringify(metadata),
       permission
+    );
+  }
+
+  async updateRoomBaiban(session: Session, { baiban_stats }: UpdateRoomBaibanParams) {
+
+    const rooms = await this.roomService.listRooms([session.room_name]);
+
+    if (rooms.length === 0) {
+      throw new Error("Room does not exist");
+    }
+
+    const room = rooms[0];
+    const roomMetadata = JSON.parse(room.metadata) as RoomMetadata;
+    roomMetadata.baiban_stats = baiban_stats;
+
+
+    await this.roomService.updateRoomMetadata(
+      session.room_name,
+      JSON.stringify(roomMetadata)
     );
   }
 

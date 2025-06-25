@@ -8,7 +8,7 @@ import {
 } from "@livekit/components-react";
 import { CaretDownIcon } from "@radix-ui/react-icons";
 import { Button, DropdownMenu, Flex } from "@radix-ui/themes";
-import {ConnectionState, LocalVideoTrack} from "livekit-client";
+import {ConnectionState, LocalVideoTrack, VideoPresets} from "livekit-client";
 import { useEffect, useState } from "react";
 
 export function MediaDeviceSettings() {
