@@ -87,6 +87,7 @@ export function StreamPlayer({ isHost = false }) {
   const { metadata, name: roomName, state: roomState } = useRoomContext();
   // 解析房间元数据
   const roomMetadata = (metadata && JSON.parse(metadata)) as RoomMetadata;
+  console.log("roomMetadata", roomMetadata);
   // 获取本地参与者信息
   const { localParticipant } = useLocalParticipant();
   // 解析本地参与者元数据
@@ -181,38 +182,45 @@ export function StreamPlayer({ isHost = false }) {
     }
   }, [screenShare]);
   const screenShareHandler=(screenShare: boolean) =>{
-    setBaiban(false)
+    updateRoomBaiban(false)
     setScreenShare(screenShare)
   }
 
 
+
   /*白板*/
   const [baiban, setBaiban] = useState(false);
+  // useEffect(() => {
+  //   console.log('房间状态:', roomMetadata)
+  //   if (roomMetadata && roomMetadata.baiban_stats !== undefined) {
+  //     setBaiban(roomMetadata.baiban_stats);
+  //   }
+  // }, [roomMetadata]);
   // 消息推送组件
-  useEffect(() => {
-    const handler = (data: MessageData) => {
-      // 处理白板消息
-      console.log('接收白板消息:', data);
-      const baibanMessage = (data && JSON.parse(data.message)) as BaiBanMessage;
-      setBaiban(baibanMessage.stats)
-    };
+  // useEffect(() => {
+  //   const handler = (data: MessageData) => {
+  //     // 处理白板消息
+  //     console.log('接收白板消息:', data);
+  //     const baibanMessage = (data && JSON.parse(data.message)) as BaiBanMessage;
+  //     setBaiban(baibanMessage.stats)
+  //   };
+  //
+  //   EventBus.subscribe("bai_ban", handler);
+  //   return () => EventBus.unsubscribe("message", handler);
+  // }, []);
+  // const baibanHandler=(baiban: boolean) =>{
+  //   setBaiban(baiban)
+  //   setScreenShare(false)
+  //   EventBus.publish("message", {
+  //     type: 2,
+  //     message: JSON.stringify({
+  //       stats: baiban
+  //     })
+  //   });
+  //   updateRoomBaiban();
+  // }
 
-    EventBus.subscribe("bai_ban", handler);
-    return () => EventBus.unsubscribe("message", handler);
-  }, []);
-  const baibanHandler=(baiban: boolean) =>{
-    setBaiban(baiban)
-    setScreenShare(false)
-    EventBus.publish("message", {
-      type: 2,
-      message: JSON.stringify({
-        stats: baiban
-      })
-    });
-    updateRoomBaiban();
-  }
-
-  const updateRoomBaiban = async () => {
+  const updateRoomBaiban = async (baibanStats: boolean) => {
     // TODO: optimistic update
     await fetch("/api/update_room_baiban", {
       method: "POST",
@@ -221,7 +229,7 @@ export function StreamPlayer({ isHost = false }) {
         Authorization: `Token ${authToken}`,
       },
       body: JSON.stringify({
-        baiban_stats: baiban
+        baiban_stats: baibanStats
       }),
     });
   };
@@ -263,32 +271,19 @@ return (
         </div>
 
         {/* 修改后的白板区域 */}
-      {/* 白板/屏幕共享区域 */}
-      <div
-          className="bg-gray-900 border-t border-gray-700 relative"
-          style={{
-            height: "70%",
-            width: "100%",
-            display: baiban ? 'block' : 'none' // 只在白板启用时显示
-          }}
-      >
-        {/* 移除不必要的嵌套 div */}
-        {baiban && (
+        <div className="bg-gray-900 border-t border-gray-700 relative flex justify-center items-center" style={{ height: "70%", width: "100%" }}>
+          <div className="w-full h-full relative flex items-center justify-center overflow-hidden">
+            {screenShareTracks && screenShareTracks.length > 0 ? (<VideoTrack
+                trackRef={screenShareTracks[0]}
+                className="max-w-full max-h-full object-contain"
+            />): roomMetadata?.baiban_stats && (
+                // 修改这里：移除固定高度，使用flex填充容器
 
-                <BaiBan />
+                  <BaiBan />
 
-        )}
-
-        {/* 屏幕共享 */}
-        {screenShareTracks.length > 0 && (
-            <div className="absolute inset-0">
-              <VideoTrack
-                  trackRef={screenShareTracks[0]}
-                  className="w-full h-full object-contain"
-              />
-            </div>
-        )}
-      </div>
+            )}
+          </div>
+        </div>
 
         {/* 以下元素保持不变 */}
         {remoteAudioTracks.map((t) => (
@@ -343,10 +338,10 @@ return (
                         localParticipant.identity && (
                             <Button
                                 size="1"
-                                variant={baiban ? "soft" : "surface"}
-                                onClick={() => baibanHandler(!baiban)}
+                                variant={roomMetadata?.baiban_stats ? "soft" : "surface"}
+                                onClick={() => updateRoomBaiban(!roomMetadata?.baiban_stats)}
                             >
-                              白板 {baiban ? "打开" : "关闭"}
+                              白板 {roomMetadata?.baiban_stats ? "打开" : "关闭"}
                             </Button>
                         )}
                   </Flex>

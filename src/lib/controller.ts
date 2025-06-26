@@ -223,7 +223,7 @@ export class Controller {
         })
       }
     );
-
+    metadata.baiban_stats = false;
     if (!roomName) {
       roomName = generateRoomId();
     }

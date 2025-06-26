@@ -114,22 +114,22 @@ export function Chat() {
       await send(JSON.stringify(message));
     }
   };
-
-  // 消息推送组件
-  useEffect(() => {
-    const handler = (data: MessageData) => {
-      // 处理白板消息
-      console.log('准备推送消息:', data);
-      if (send) {
-         send(JSON.stringify(data)).then((m) => {
-           console.log('消息推送成功');
-         });
-      }
-    };
-
-    EventBus.subscribe("message", handler);
-    return () => EventBus.unsubscribe("message", handler);
-  }, []);
+  // const handler = (data: MessageData) => {
+  //   // 处理白板消息
+  //   console.log('准备推送消息:', data);
+  //   if (send) {
+  //     send(JSON.stringify(data)).then((m) => {
+  //       console.log('消息推送成功');
+  //     });
+  //   }
+  // };
+  //
+  // EventBus.subscribe("message", handler);
+  // // 消息推送组件
+  // useEffect(() => {
+  //
+  //   return () => EventBus.unsubscribe("message", handler);
+  // }, );
 
   return (
     <Flex direction="column" className="h-full">
