@@ -110,6 +110,7 @@ function ParticipantListItem({
         );
       }
     }
+    return null
   }
 
   function ViewerActions() {
@@ -157,6 +158,7 @@ function ParticipantListItem({
         );
       }
     }
+    return null;
   }
 
   return (
@@ -194,7 +196,7 @@ export function PresenceDialog({
     (participant) => participant.permissions?.canPublish ?? false
   );
   const viewers = participants.filter(
-    (participant) => !participant.permissions?.canPublish ?? true
+    (participant) => !participant.permissions?.canPublish
   );
 
   return (

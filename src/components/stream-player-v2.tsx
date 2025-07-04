@@ -182,7 +182,9 @@ export function StreamPlayer({ isHost = false }) {
     }
   }, [screenShare]);
   const screenShareHandler=(screenShare: boolean) =>{
-    updateRoomBaiban(false)
+    if (screenShare) {
+      updateRoomBaiban(false)
+    }
     setScreenShare(screenShare)
   }
 
@@ -221,6 +223,9 @@ export function StreamPlayer({ isHost = false }) {
   // }
 
   const updateRoomBaiban = async (baibanStats: boolean) => {
+    if (baibanStats) {
+      screenShareHandler(false)
+    }
     // TODO: optimistic update
     await fetch("/api/update_room_baiban", {
       method: "POST",
