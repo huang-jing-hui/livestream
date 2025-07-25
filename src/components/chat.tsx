@@ -47,7 +47,7 @@ function ChatMessage({ message }: { message: ReceivedChatMessage }) {
   );
 }
 export type MessageData = {
-  type: number; // 1: 聊天, 2: 白板
+  type: number; // 1: 聊天, 2: 白板 ,3:视觉
   message: string; // 内容
 };
 export function Chat() {
@@ -74,25 +74,26 @@ export function Chat() {
 
     uniqueMessages.forEach((msg) => {
       try {
-        const parsed = JSON.parse(msg.message) as MessageData;
-
-        switch(parsed.type) {
-          case 1: // 聊天消息
-            chatMsgs.push({
-              timestamp: msg.timestamp,
-              message: parsed.message,
-              from: msg.from
-            });
-            break;
-          case 2: // 白板消息
-            EventBus.publish("bai_ban", parsed);
-            break;
-          case 3: // 屏幕消息
-            EventBus.publish("pin_mu", parsed);
-            break;
-          default:
-            console.warn('Unknown message type:', parsed.type);
-        }
+        // const parsed = JSON.parse(msg.message) as MessageData;
+        //
+        // switch(parsed.type) {
+        //   case 1: // 聊天消息
+        //     chatMsgs.push({
+        //       timestamp: msg.timestamp,
+        //       message: parsed.message,
+        //       from: msg.from
+        //     });
+        //     break;
+        //   case 2: // 白板消息
+        //     EventBus.publish("bai_ban", parsed);
+        //     break;
+        //   case 3: // 屏幕消息
+        //     EventBus.publish("pin_mu", parsed);
+        //     break;
+        //   default:
+        //     console.warn('Unknown message type:', parsed.type);
+        // }
+        chatMsgs.push(msg);
       } catch (e) {
         console.error('Message parsing failed:', e);
         // 如果解析失败，默认作为聊天消息处理
@@ -107,11 +108,11 @@ export function Chat() {
   const onSend = async () => {
     if (draft.trim().length && send) {
       setDraft("");
-      const message  ={
-        type: 1,
-        message: draft
-      } as MessageData
-      await send(JSON.stringify(message));
+      // const message  ={
+      //   type: 1,
+      //   message: draft
+      // } as MessageData
+      await send(JSON.stringify(draft));
     }
   };
   // const handler = (data: MessageData) => {

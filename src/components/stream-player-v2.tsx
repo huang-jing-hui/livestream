@@ -27,11 +27,13 @@ import {MediaDeviceSettings} from "./media-device-settings";
 import {BaiBan} from "./baiban";
 import {PresenceDialog} from "./presence-dialog";
 import {useAuthToken} from "./token-context";
+import {GestureRecognizerComponent} from "./GestureRecognizerYuanbao";
+
 import EventBus from "@/js/eventBus";
 import {MessageData} from "@/components/chat";
 import React from "react";
 
-export type BaiBanMessage = {
+export type Message = {
   stats: boolean; // 白板状态,打开或关闭
 };
 
@@ -54,7 +56,7 @@ function ConfettiCanvas() {
     setConfetti(new Confetti({ canvas: canvasEl?.current ?? undefined }));
   }, []);
 
-  return <canvas ref={canvasEl} className="absolute h-full w-full" style={{ height: "20%" }}/>;
+  return <canvas ref={canvasEl} className="absolute h-full w-full" style={{ height: "100%" }}/>;
 }
 
 /*将台上用户按照身份排序*/
@@ -87,7 +89,7 @@ export function StreamPlayer({ isHost = false }) {
   const { metadata, name: roomName, state: roomState } = useRoomContext();
   // 解析房间元数据
   const roomMetadata = (metadata && JSON.parse(metadata)) as RoomMetadata;
-  console.log("roomMetadata", roomMetadata);
+  //console.log("roomMetadata", roomMetadata);
   // 获取本地参与者信息
   const { localParticipant } = useLocalParticipant();
   // 解析本地参与者元数据
@@ -208,7 +210,7 @@ export function StreamPlayer({ isHost = false }) {
   //   };
   //
   //   EventBus.subscribe("bai_ban", handler);
-  //   return () => EventBus.unsubscribe("message", handler);
+  //   return () => EventBus.unsubscribe("bai_ban", handler);
   // }, []);
   // const baibanHandler=(baiban: boolean) =>{
   //   setBaiban(baiban)
@@ -238,6 +240,18 @@ export function StreamPlayer({ isHost = false }) {
       }),
     });
   };
+  // 机器学习
+  const [gestureRecognizer, setGestureRecognizer] = useState(false);
+  const updateGestureRecognizer = async (gesture: boolean) => {
+    setGestureRecognizer(gesture);
+    // console.log("发送视觉消息")
+    // EventBus.publish("gesture", {
+    //       type: 2,
+    //       message: JSON.stringify({
+    //         stats: gesture
+    //       })
+    //     });
+  }
 
   // 渲染组件界面
 return (
@@ -287,6 +301,10 @@ return (
                   <BaiBan />
 
             )}
+            {gestureRecognizer && (
+                    <GestureRecognizerComponent/>
+                )
+            }
           </div>
         </div>
 
@@ -347,6 +365,16 @@ return (
                                 onClick={() => updateRoomBaiban(!roomMetadata?.baiban_stats)}
                             >
                               白板 {roomMetadata?.baiban_stats ? "打开" : "关闭"}
+                            </Button>
+                        )}
+                    {roomMetadata?.creator_identity ==
+                        localParticipant.identity && (
+                            <Button
+                                size="1"
+                                variant={gestureRecognizer ? "soft" : "surface"}
+                                onClick={() => updateGestureRecognizer(!gestureRecognizer)}
+                            >
+                              视觉控制 {gestureRecognizer ? "打开" : "关闭"}
                             </Button>
                         )}
                   </Flex>
