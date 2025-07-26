@@ -8,8 +8,9 @@ import "../styles/GestureRecognizerYuanbao.css";
 import EventBus from "@/js/eventBus";
 import {MessageData} from "@/components/chat";
 import {Message} from "@/components/stream-player-v2";
-import {useChat, useDataChannel} from "@livekit/components-react";
+import {useChat, useDataChannel, useLocalParticipant, useRoomContext} from "@livekit/components-react";
 import {DataPacket_Kind, Participant} from "livekit-client";
+import toast from "react-hot-toast";
 
 
 export function GestureRecognizerComponent() {
@@ -25,6 +26,7 @@ export function GestureRecognizerComponent() {
     const basePath = window.location.origin + "/";
     const modelPath = `${basePath}mediapipe/models/gesture_recognizer.task`;
     const [categoryName, setCategoryName] = useState(""); // 视觉状态
+    const categoryInstructions = useRef(""); // 视觉指令
     //使用ref来存储识别器和画布引用
     const gestureRecognizerRef = useRef<GestureRecognizer | null>(null);
     const canvasReadyRef = useRef(false);
@@ -99,6 +101,9 @@ export function GestureRecognizerComponent() {
             cancelAnimationFrame(requestRef.current);
             if (gestureRecognizerRef.current) {
                 gestureRecognizerRef.current.close();
+            }
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
             }
         };
     }, []);
@@ -180,57 +185,57 @@ export function GestureRecognizerComponent() {
 
             try {
                 const results = gestureRecognizerRef.current.recognizeForVideo(video, nowInMs);
-
-                // 获取画布上下文 - 添加详细的错误处理
-                const canvasCtx = canvasRef.current.getContext("2d");
-                if (!canvasCtx) {
-                    console.error("无法获取Canvas 2D上下文");
-                    console.log("canvasRef.current:", canvasRef.current);
-                    console.log("canvas尺寸:", canvasRef.current.width, "x", canvasRef.current.height);
-                    return;
-                }
-
-                // 设置画布尺寸与视频匹配
-                if (canvasRef.current.width !== video.videoWidth ||
-                    canvasRef.current.height !== video.videoHeight) {
-                    console.log("更新画布尺寸")
-                    console.log("canvasRef.current.width", canvasRef.current.width);
-                    console.log("canvasRef.current.height", canvasRef.current.height);
-                    console.log("video.videoWidth", video.videoWidth);
-                    console.log("video.videoHeight", video.videoHeight);
-
-                    canvasRef.current.width = video.videoWidth;
-                    canvasRef.current.height = video.videoHeight;
-
-                    // 更新容器尺寸
-                    if (containerRef.current) {
-                        console.log("更新容器尺寸")
-                        console.log("containerRef.current.style.width", containerRef.current.style.width);
-                        console.log("containerRef.current.style.height", containerRef.current.style.height);
-                        containerRef.current.style.width = `${video.videoWidth}px`;
-                        containerRef.current.style.height = `${video.videoHeight}px`;
-                    }
-                }
-
-                // 清除画布
-
-                canvasCtx.save();
-                canvasCtx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-
-                if (results.landmarks) {
-                    const drawingUtils = new DrawingUtils(canvasCtx);
-                    for (const landmarks of results.landmarks) {
-                        drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, {
-                            color: "#00FF00",
-                            lineWidth: 5,
-                        });
-                        drawingUtils.drawLandmarks(landmarks, {
-                            color: "#FF0000",
-                            lineWidth: 2,
-                        });
-                    }
-                }
-                canvasCtx.restore();
+                //
+                // // 获取画布上下文 - 添加详细的错误处理
+                // const canvasCtx = canvasRef.current.getContext("2d");
+                // if (!canvasCtx) {
+                //     console.error("无法获取Canvas 2D上下文");
+                //     console.log("canvasRef.current:", canvasRef.current);
+                //     console.log("canvas尺寸:", canvasRef.current.width, "x", canvasRef.current.height);
+                //     return;
+                // }
+                //
+                // // 设置画布尺寸与视频匹配
+                // if (canvasRef.current.width !== video.videoWidth ||
+                //     canvasRef.current.height !== video.videoHeight) {
+                //     console.log("更新画布尺寸")
+                //     console.log("canvasRef.current.width", canvasRef.current.width);
+                //     console.log("canvasRef.current.height", canvasRef.current.height);
+                //     console.log("video.videoWidth", video.videoWidth);
+                //     console.log("video.videoHeight", video.videoHeight);
+                //
+                //     canvasRef.current.width = video.videoWidth;
+                //     canvasRef.current.height = video.videoHeight;
+                //
+                //     // 更新容器尺寸
+                //     if (containerRef.current) {
+                //         console.log("更新容器尺寸")
+                //         console.log("containerRef.current.style.width", containerRef.current.style.width);
+                //         console.log("containerRef.current.style.height", containerRef.current.style.height);
+                //         containerRef.current.style.width = `${video.videoWidth}px`;
+                //         containerRef.current.style.height = `${video.videoHeight}px`;
+                //     }
+                // }
+                //
+                // // 清除画布
+                //
+                // canvasCtx.save();
+                // canvasCtx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+                //
+                // if (results.landmarks) {
+                //     const drawingUtils = new DrawingUtils(canvasCtx);
+                //     for (const landmarks of results.landmarks) {
+                //         drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, {
+                //             color: "#00FF00",
+                //             lineWidth: 5,
+                //         });
+                //         drawingUtils.drawLandmarks(landmarks, {
+                //             color: "#FF0000",
+                //             lineWidth: 2,
+                //         });
+                //     }
+                // }
+                // canvasCtx.restore();
 
 
                 // 显示结果
@@ -254,8 +259,8 @@ export function GestureRecognizerComponent() {
 
                     // 获取左右手信息
                     let handedness = "未知";
-                    if (results.handednesses && results.handednesses.length > 0 && results.handednesses[0].length > 0) {
-                        handedness = results.handednesses[0][0].displayName;
+                    if (results.handedness && results.handedness.length > 0 && results.handedness[0].length > 0) {
+                        handedness = results.handedness[0][0].displayName;
                     }
                     setCategoryName(categoryName);
                     setGestureResult(
@@ -269,22 +274,46 @@ export function GestureRecognizerComponent() {
             }
         }
 
-        requestRef.current = requestAnimationFrame(predictWebcam);
+        //requestRef.current = requestAnimationFrame(predictWebcam);
     };
     const emojiMap: Record<string, string> = {
-        "Closed_Fist": "✊",
-        "Open_Palm": "🙌",
+        // "Closed_Fist": "✊",
+        // "Open_Palm": "🙌",
         "Thumb_Up": "👍",
         "Victory": "✌️",
         "ILoveYou": "❤️"
     };
+
+    // 从上下文中获取房间信息
+    const {name: roomName} = useRoomContext();
+    // 获取本地参与者信息
+    const {localParticipant} = useLocalParticipant();
     useEffect(() => {
         if (categoryName) {
-            console.log('当前手势:', categoryName)
+            //console.log('当前手势:', categoryName)
             const emoji = emojiMap[categoryName];
             if (emoji) {
                 onSend(emoji)
             }
+            const instructions = categoryInstructions.current + categoryName;
+            console.log('当前手势提示:', instructions)
+            if (instructions === 'Open_PalmClosed_Fist') {
+                fetch("http://192.168.110.137:8888/srs/invitedLive", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({
+                        roomName: roomName,
+                        identity: localParticipant.identity,
+                    }),
+                }).then(() => {
+                    toast.success('已经捕获当前直播间,快去和同局域网的小伙伴分享吧！');
+                });
+            }else if (categoryName === 'Open_Palm') {
+                toast.success('握拳之后就可以捕获当前直播间了哦！');
+            }
+
+            categoryInstructions.current = categoryName;
+
         }
     }, [categoryName]);
 
@@ -293,12 +322,26 @@ export function GestureRecognizerComponent() {
         if (webcamRunning && webcamRef.current) {
             // 确保视频已加载
             if (webcamRef.current.readyState >= HTMLMediaElement.HAVE_METADATA) {
-                predictWebcam();
+                startPrediction();
             } else {
-                webcamRef.current.onloadeddata = predictWebcam;
+                webcamRef.current.onloadeddata = startPrediction;
             }
         }
     }, [webcamRunning]);
+
+    // 在组件外部定义间隔ID引用
+    const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+    // 在组件内部添加状态管理
+    const [isPredicting, setIsPredicting] = useState(false);
+
+    // 启动预测
+    const startPrediction = () => {
+        if (!isPredicting) {
+            setIsPredicting(true);
+            intervalRef.current = setInterval(predictWebcam, 2000); // 每秒执行一次
+        }
+    };
 
     return (
         <div className="container">
@@ -309,6 +352,7 @@ export function GestureRecognizerComponent() {
                 ref={containerRef}
                 className="webcam-container"
                 style={{
+                    display: "none",
                     position: 'relative',
                     width: '480px',
                     height: '360px',
@@ -324,7 +368,7 @@ export function GestureRecognizerComponent() {
                     width="480"
                     height="360"
                     style={{
-                        display: webcamRunning ? "block" : "none",
+                        display:  "none",
                         position: 'absolute',
                         top: 0,
                         left: 0,
@@ -340,6 +384,7 @@ export function GestureRecognizerComponent() {
                     width="480"
                     height="360"
                     style={{
+                        display: 'none',
                         position: 'absolute',
                         top: 0,
                         left: 0,
@@ -350,13 +395,13 @@ export function GestureRecognizerComponent() {
                     }}
                 />
 
-                {gestureResult && (
-                    <div className="gesture-output">
-                        {gestureResult.split('\n').map((line, i) => (
-                            <div key={i}>{line}</div>
-                        ))}
-                    </div>
-                )}
+                {/*{gestureResult && (*/}
+                {/*    <div className="gesture-output">*/}
+                {/*        {gestureResult.split('\n').map((line, i) => (*/}
+                {/*            <div key={i}>{line}</div>*/}
+                {/*        ))}*/}
+                {/*    </div>*/}
+                {/*)}*/}
 
                 {/*/!* 添加调试信息 *!/*/}
                 {/*<div className="debug-info">*/}

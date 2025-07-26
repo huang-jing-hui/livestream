@@ -7,6 +7,7 @@ export async function POST(req: Request) {
 
   try {
     const reqBody = await req.json();
+    console.log(reqBody)
     const response = await controller.createStream(
       reqBody as CreateStreamParams
     );

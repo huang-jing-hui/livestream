@@ -74,6 +74,7 @@ export function Chat() {
 
     uniqueMessages.forEach((msg) => {
       try {
+        console.log("接收消息",msg)
         // const parsed = JSON.parse(msg.message) as MessageData;
         //
         // switch(parsed.type) {
@@ -112,7 +113,7 @@ export function Chat() {
       //   type: 1,
       //   message: draft
       // } as MessageData
-      await send(JSON.stringify(draft));
+      await send(draft);
     }
   };
   // const handler = (data: MessageData) => {

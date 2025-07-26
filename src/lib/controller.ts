@@ -71,6 +71,7 @@ export type CreateStreamResponse = {
 export type JoinStreamParams = {
   room_name: string;
   identity: string;
+  canPublish?: boolean;
 };
 
 export type JoinStreamResponse = {
@@ -274,6 +275,7 @@ export class Controller {
   async joinStream({
     identity,
     room_name,
+    canPublish = false,
   }: JoinStreamParams): Promise<JoinStreamResponse> {
     // Check for existing participant with same identity
     let exists = false;
@@ -300,7 +302,7 @@ export class Controller {
     at.addGrant({
       room: room_name,
       roomJoin: true,
-      canPublish: false,
+      canPublish: canPublish,
       canSubscribe: true,
       canPublishData: true,
     });

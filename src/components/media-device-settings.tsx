@@ -81,26 +81,26 @@ export function MediaDeviceSettings() {
         >
           摄像头 {camEnabled ? "打开" : "关闭"}
         </Button>
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger disabled={!camEnabled}>
-            <Button variant="soft" size="1">
-              <CaretDownIcon />
-            </Button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content size="1">
-            {cameraDevices.map((d) => (
-              <DropdownMenu.Item
-                key={d.deviceId}
-                onClick={() => setActiveCameraDevice(d.deviceId)}
-                className={cn(
-                  d.deviceId === activeCameraDeviceId && "text-accent-11"
-                )}
-              >
-                {d.label}
-              </DropdownMenu.Item>
-            ))}
-          </DropdownMenu.Content>
-        </DropdownMenu.Root>
+        {/*<DropdownMenu.Root>*/}
+        {/*  <DropdownMenu.Trigger disabled={!camEnabled}>*/}
+        {/*    <Button variant="soft" size="1">*/}
+        {/*      <CaretDownIcon />*/}
+        {/*    </Button>*/}
+        {/*  </DropdownMenu.Trigger>*/}
+        {/*  <DropdownMenu.Content size="1">*/}
+        {/*    {cameraDevices.map((d) => (*/}
+        {/*      <DropdownMenu.Item*/}
+        {/*        key={d.deviceId}*/}
+        {/*        onClick={() => setActiveCameraDevice(d.deviceId)}*/}
+        {/*        className={cn(*/}
+        {/*          d.deviceId === activeCameraDeviceId && "text-accent-11"*/}
+        {/*        )}*/}
+        {/*      >*/}
+        {/*        {d.label}*/}
+        {/*      </DropdownMenu.Item>*/}
+        {/*    ))}*/}
+        {/*  </DropdownMenu.Content>*/}
+        {/*</DropdownMenu.Root>*/}
       </Flex>
     </>
   );
